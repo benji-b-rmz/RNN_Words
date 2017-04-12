@@ -1,4 +1,4 @@
 # ignore virtual env files/dirs, and idea settings
-/tfimg
+/rnns
 .env
 .idea
