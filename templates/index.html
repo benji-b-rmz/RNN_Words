@@ -2,9 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Neural Network Story generator</title>
+    <title>AI Story generator</title>
+
+    <!--Stylesheets-->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+    <!--Load JavaScript files -->
+    <!-- JQuery before Bootstrap -->
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous">
+
+    </script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" type="application/javascript"></script>
+
 </head>
+
+
+
 <body>
-<h1>NN Story Gen</h1>
+
+<div class="container">
+    <div class="row">
+        <h1>AI Story Generator</h1>
+        <hr>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="form-group">
+                <label for="prompt">Input 3 words from text:</label>
+                <input type="text" class="form-control" id="prompt">
+                <button id="submit">Generate!</button>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <label for="output">Network output:</label>
+            <div class="p" id="output">
+                a
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        //ajax call to API on user generate request
+        $("#submit").click(function () {
+
+            $.ajax({
+                url:'/api/storygen',
+                method: 'POST',
+                contentType: 'text/plain',
+                data: $('#prompt').val(),
+                success: function(result){
+                     $("#output").html(result);
+                },
+            });
+        });
+
+
+    });
+</script>
+
+
 </body>
 </html>
