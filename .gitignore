@@ -2,3 +2,7 @@
 /rnns
 .env
 .idea
+
+#pycache files
+/__pycach__
+*.pyc
