@@ -76,9 +76,7 @@ def create_story(input_sentence):
         for i in range(32):
             keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
             onehot_pred = sess.run(pred, feed_dict={x: keys})
-            print (onehot_pred)
-            onehot_pred_index = int(tf.argmax(onehot_pred, 1).eval())
-            print (onehot_pred_index)
+            onehot_pred_index = int(tf.argmax(onehot_pred, 1).eval(session=sess))
             sentence = "%s %s" % (sentence, reverse_dictionary[onehot_pred_index])
             symbols_in_keys = symbols_in_keys[1:]
             symbols_in_keys.append(onehot_pred_index)
@@ -87,4 +85,3 @@ def create_story(input_sentence):
         print("Word not in dictionary")
 
 create_story("time boy going")
-print(reverse_dictionary)
