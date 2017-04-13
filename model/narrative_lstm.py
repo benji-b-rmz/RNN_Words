@@ -2,8 +2,8 @@
 # LSTM Example by Rowel Atienza:
 # https://medium.com/towards-data-science/lstm-by-example-using-tensorflow-feb0c1968537
 # extended to longer sequence inputs, and trained on a different corpus
-# current corpus is "The Call of Cthulhu" by H.P. Lovecraft
-# found here: http://www.hplovecraft.com/writings/texts/fiction/cc.aspx
+# current corpus is "A Handful of answers"
+# found here: http://www.english-for-students.com/Handful-of-Answers.html
 
 import numpy as np
 import tensorflow as tf
@@ -11,7 +11,7 @@ from tensorflow.contrib import rnn
 import random
 import collections
 
-training_file = open('text.txt','r')
+training_file = open('./texts/text.txt','r')
 training_data = training_file.read().split()
 print("Loaded training data...")
 
@@ -28,9 +28,9 @@ vocab_size = len(dictionary)
 
 # Parameters
 learning_rate = 0.001
-training_iters = 50000
+training_iters = 20000
 display_step = 1000
-n_input = 5
+n_input = 3
 
 # number of units in RNN cell
 n_hidden = 512
@@ -40,12 +40,9 @@ x = tf.placeholder("float", [None, n_input, 1])
 y = tf.placeholder("float", [None, vocab_size])
 
 # RNN output node weights and biases
-weights = {
-    'out': tf.Variable(tf.random_normal([n_hidden, vocab_size]))
-}
-biases = {
-    'out': tf.Variable(tf.random_normal([vocab_size]))
-}
+with tf.variable_scope("story"):
+    weights = tf.Variable(tf.random_normal([n_hidden, vocab_size]), name="weights")
+    biases = tf.Variable(tf.random_normal([vocab_size]), name="biases")
 
 def RNN(x, weights, biases):
 
@@ -60,17 +57,12 @@ def RNN(x, weights, biases):
     # Average Accuracy= 95.20% at 50k iter
     rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(n_hidden),rnn.BasicLSTMCell(n_hidden)])
 
-    # 1-layer LSTM with n_hidden units but with lower accuracy.
-    # Average Accuracy= 90.60% 50k iter
-    # Uncomment line below to test but comment out the 2-layer rnn.MultiRNNCell above
-    # rnn_cell = rnn.BasicLSTMCell(n_hidden)
-
     # generate prediction
     outputs, states = rnn.static_rnn(rnn_cell, x, dtype=tf.float32)
 
     # there are n_input outputs but
     # we only want the last output
-    return tf.matmul(outputs[-1], weights['out']) + biases['out']
+    return tf.matmul(outputs[-1], weights) + biases
 
 pred = RNN(x, weights, biases)
 
@@ -85,8 +77,12 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 # Initializing the variables
 init = tf.global_variables_initializer()
 
+# creating Saver object to store Biases and Weights
+saver = tf.train.Saver()
+
 # Launch the graph
 with tf.Session() as session:
+
     session.run(init)
     step = 0
     offset = random.randint(0,n_input+1)
@@ -124,6 +120,10 @@ with tf.Session() as session:
         step += 1
         offset += (n_input+1)
     print("Optimization Finished!")
+
+    #save the trained values of the weights and biases
+    save_path = saver.save(session, './checkpoints/story.ckpt')
+
     print("Run on command line.")
     while True:
         prompt = "%s words: " % n_input
