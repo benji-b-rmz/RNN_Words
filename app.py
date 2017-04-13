@@ -68,7 +68,6 @@ pred = RNN(x, weights, biases)
 saver = tf.train.Saver()
 saver.restore(sess, './model/checkpoints/story.ckpt' )
 
-
 def create_story(input_sentence):
 
     sentence = input_sentence
@@ -94,7 +93,7 @@ def create_story(input_sentence):
     except:
         return("Word not in dictionary!\nChoose words from the text")
 
-
+# web application
 app = Flask(__name__)
 
 @app.route('/api/storygen', methods=['POST'])
@@ -106,4 +105,4 @@ def story():
 def home():
     return render_template('index.html')
 
-app.run(debug=True)
+app.run()
