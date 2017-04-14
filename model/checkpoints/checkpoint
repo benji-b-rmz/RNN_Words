@@ -1,2 +1,2 @@
-model_checkpoint_path: "story.ckpt"
-all_model_checkpoint_paths: "story.ckpt"
+model_checkpoint_path: "hh_model.ckpt"
+all_model_checkpoint_paths: "hh_model.ckpt"

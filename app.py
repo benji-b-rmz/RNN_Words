@@ -10,8 +10,28 @@ import random
 import collections
 
 
-training_file = open('./model/texts/text.txt','r')
-training_data = training_file.read().split()
+training_file = open('./model/texts/hitch_hiker_quotes.txt','r')
+
+# prepping the file for input into training data
+file_data = training_file.read()
+file_data = file_data.replace(',', ' , ')
+file_data = file_data.replace('.', ' . ')
+file_data = file_data.replace(':', ' : ')
+file_data = file_data.replace(';', ' ; ')
+file_data = file_data.replace('"', ' " ')
+file_data = file_data.replace('”', ' ” ')
+file_data = file_data.replace('“', ' “ ')
+file_data = file_data.replace('?', ' ? ')
+file_data = file_data.replace('!', ' ! ')
+file_data = file_data.replace('-', ' - ')
+file_data = file_data.replace('(', ' ( ')
+file_data = file_data.replace(')', ' ) ')
+file_data = file_data.replace('[', ' [ ')
+file_data = file_data.replace(']', ' ] ')
+file_data = file_data.replace('―', ' ')
+
+#store the words in the file in training data
+training_data = file_data.split()
 print("Loaded training data...")
 
 def build_dataset(words):
@@ -25,23 +45,21 @@ def build_dataset(words):
 dictionary, reverse_dictionary = build_dataset(training_data)
 vocab_size = len(dictionary)
 
-
-
-n_input = 3
+# sequence length, number of words input to the net
+n_input = 10
 
 # number of units in RNN cell
-n_hidden = 512
+n_hidden = 500
 
 # tf Graph input
 x = tf.placeholder("float", [None, n_input, 1])
 y = tf.placeholder("float", [None, vocab_size])
 
-
 sess = tf.Session()
 # RNN output node weights and biases
-with tf.variable_scope("story"):
-    weights = tf.Variable(tf.random_normal([n_hidden, vocab_size]), name="weights")
-    biases = tf.Variable(tf.random_normal([vocab_size]), name="biases")
+with tf.variable_scope("hh_guide"):
+    weights = tf.Variable(tf.random_normal([n_hidden, vocab_size]), name="hh_weights")
+    biases = tf.Variable(tf.random_normal([vocab_size]), name="hh_biases")
 
 def RNN(x, weights, biases):
 
@@ -66,7 +84,7 @@ pred = RNN(x, weights, biases)
 
 #load the previously trained values
 saver = tf.train.Saver()
-saver.restore(sess, './model/checkpoints/story.ckpt' )
+saver.restore(sess, './model/checkpoints/hh_model.ckpt' )
 
 def create_story(input_sentence):
 
@@ -80,7 +98,7 @@ def create_story(input_sentence):
     try:
         symbols_in_keys = [dictionary[str(words[i])] for i in range(len(words))]
         print(symbols_in_keys)
-        for i in range(32):
+        for i in range(200):
             keys = np.reshape(np.array(symbols_in_keys), [-1, n_input, 1])
             onehot_pred = sess.run(pred, feed_dict={x: keys})
             onehot_pred_index = int(np.argmax(onehot_pred))
