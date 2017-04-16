@@ -28,29 +28,45 @@
 
 <div class="container">
     <div class="row">
-        <h1>Neural Net Passage Generator</h1>
-        <hr>
+        <div class="col-sm-10 col-sm-offset-1">
+
+            <h1>Neural Net Passage Generator</h1>
+            <hr>
+        </div>
     </div>
 
     <div class="row">
-        <div class="col-sm-6">
-            <h4>Trained on quotes from The Hitchhiker's Guide to the Galaxy</h4>
-            <a href="https://www.goodreads.com/work/quotes/3078186-the-hitch-hiker-s-guide-to-the-galaxy">quotes found here.</a>
-            <br>
-            <br>
-            <div class="form-group">
-                <label for="prompt">Input 10 words from text:</label>
-                <input type="text" class="form-control" id="prompt">
-                <button id="submit">Generate!</button>
+        <div class="col-sm-10 col-sm-offset-1">
+
+
+            <div class="col-sm-6">
+                <h4>Trained on quotes from The Hitchhiker's Guide to the Galaxy</h4>
+                <a href="https://www.goodreads.com/work/quotes/3078186-the-hitch-hiker-s-guide-to-the-galaxy">quotes found here.</a>
+                <br>
+                <br>
+                <div class="form-group">
+                    <label for="prompt">Input 10 words from text:</label>
+                    <input type="text" class="form-control" id="prompt">
+                    <button id="submit">Generate!</button>
+                </div>
             </div>
-        </div>
-        <div class="col-sm-6">
-            <label for="output">Network output:</label>
-            <div class="p" id="output">
-                
+            <div class="col-sm-6">
+                <label for="output">Network output:</label>
+                <div class="p" id="output">
+
+                </div>
             </div>
+
         </div>
+
     </div>
+
+    <div class="row">
+        <div class="col"
+    </div>
+    {% for entry in hh_word_bank %}
+    <button class="btn btn-primary">{{ entry }}</button>
+    {% endfor %}
 
 </div>
 

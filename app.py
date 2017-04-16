@@ -121,5 +121,8 @@ def story():
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    #passing the word bank to the template
+    return render_template('index.html', hh_word_bank = reverse_dictionary.values() )
+
+app.run(debug=True)
 
