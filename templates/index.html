@@ -19,6 +19,8 @@
 
     </script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" type="application/javascript"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+
 
 </head>
 
@@ -28,67 +30,108 @@
 
 <div class="container">
     <div class="row">
-        <div class="col-sm-10 col-sm-offset-1">
+        <div class="col-sm-12">
 
-            <h1>Neural Net Passage Generator</h1>
+            <h1 class="text-center">Neural Net Passage Generator</h1>
+            <h5 class="text-center">Made with <i class="fa fa-heart" aria-hidden="true"></i> by Benji</h5>
+
             <hr>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-sm-10 col-sm-offset-1">
+        <div class="col-sm-12">
 
 
             <div class="col-sm-6">
-                <h4>Trained on quotes from The Hitchhiker's Guide to the Galaxy</h4>
+                <h3>Trained on quotes from The Hitchhiker's Guide to the Galaxy</h3>
                 <a href="https://www.goodreads.com/work/quotes/3078186-the-hitch-hiker-s-guide-to-the-galaxy">quotes found here.</a>
                 <br>
                 <br>
                 <div class="form-group">
-                    <label for="prompt">Input 10 words from text:</label>
-                    <input type="text" class="form-control" id="prompt">
-                    <button id="submit">Generate!</button>
+                    <h4>Click on 10 words from bank(repeats allowed):</h4>
+                    <h4>Your Input:</h4>
+                    <br>
+                    <div id="input-words"></div>
+                    <br>
+                    <button id="submit" class="btn btn-success">Generate!</button>
                 </div>
             </div>
-            <div class="col-sm-6">
-                <label for="output">Network output:</label>
-                <div class="p" id="output">
 
+            <div class="col-sm-6">
+                <h4 for="output">Network output:</h4>
+
+                <div id="output">
+                    Click the words and then generate passage!
                 </div>
             </div>
 
         </div>
 
+        <hr>
+
     </div>
 
     <div class="row">
-        <div class="col"
+        <div class="col-sm-12">
+            <h2>The Word Bank:</h2>
+            {% for entry in hh_word_bank %}
+            <button class="btn bank-word">{{ entry }}</button>
+            {% endfor %}
+        </div>
+            <br>
+            <br>
     </div>
-    {% for entry in hh_word_bank %}
-    <button class="btn btn-primary">{{ entry }}</button>
-    {% endfor %}
 
 </div>
 
 <script>
     $(document).ready(function () {
 
-        //ajax call to API on user generate request
-        $("#submit").click(function () {
 
-            $.ajax({
-                url:'/api/storygen',
-                method: 'POST',
-                contentType: 'text/plain',
-                data: $('#prompt').val(),
-                success: function(result){
-                    $("#output").html(result);
-                },
-            });
+        // function to take place when word bank word clicked on
+        // adds word to input words
+        $(".bank-word").click( function(){
+
+            console.log("word clicked");
+            var word = $(this).text();
+            wordDiv = "<div class='input-word btn btn-danger'>" + word + "</div>";
+            console.log(word);
+            $("#input-words").append(wordDiv);
+
         });
 
+    });
+
+    //when input word is clicked, remove it from input div
+    $(document).on('click','.input-word',function () {
+
+        console.log("clicked on input word");
+        $(this).remove();
 
     });
+
+    // get the words from the divs in the input, send them to tensorflow model on server
+    // update output element with the response
+    $(document).on('click','#submit',function () {
+
+        console.log("clicked on submit!");
+        var words = $('.input-word').map(function() {return $(this).text();}).get().join(' ');
+        console.log(words);
+        //set output to processing gif while we wait for ajax response
+        var gif =  "<div class='text-center'> <img class='text-center' src='../static/ripple.svg' /> </div>";
+        $("#output").html(gif);
+        $.ajax({
+            url:'/api/storygen',
+            method: 'POST',
+            contentType: 'text/plain',
+            data: words,
+            success: function(result){
+                $("#output").html(result);
+            },
+        });
+    });
+
 </script>
 
 
