@@ -1,2 +1,2 @@
 # Neural Network Passage Generator
-###Demo: [ai-gen.herokuapp.com]
+### Demo: https://ai-gen.herokuapp.com
