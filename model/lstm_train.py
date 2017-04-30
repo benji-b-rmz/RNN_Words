@@ -98,7 +98,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # creating Saver object to store Biases and Weights
-saver = tf.train.Saver()
+saver = tf.train.Saver(tf.trainable_variables())
 
 # Launch the graph
 with tf.Session() as session:

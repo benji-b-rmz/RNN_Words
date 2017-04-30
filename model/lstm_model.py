@@ -25,7 +25,7 @@ vocab_size = len(dictionary)
 n_input = 3
 
 # number of units in RNN cell
-n_hidden = 512
+n_hidden = 256
 
 # tf Graph input
 x = tf.placeholder("float", [None, n_input, 1])
