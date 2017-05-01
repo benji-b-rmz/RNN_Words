@@ -8,28 +8,45 @@ import tensorflow as tf
 from tensorflow.contrib import rnn
 import random
 import collections
-
+import pickle
+import json
 
 class StoryNet(object):
 
     def __init__(self, story_text, var_scope, input_length, output_length):
-        print("initializing Story Generating Network")
+
+        self.var_scope = var_scope
         # process and store the story data
-        self.story_data, self.dictionary, self.reverse_dictionary = self.build_dataset(story_text)
+        try:
+            with open("./texts/"+var_scope+"_dict.txt", "rb") as dict_file:
+                self.dictionary = pickle.load(dict_file)
+            with open("./texts/"+var_scope+"_r_dict.txt", "rb") as reverse_dict:
+                self.reverse_dictionary = pickle.load(reverse_dict)
+            self.story_data, _, __ = self.build_dataset(story_text, False)
+            print(var_scope + "dictionary exists")
+        except:
+            print("creating fresh dicts")
+            self.story_data, self.dictionary, self.reverse_dictionary = self.build_dataset(story_text, True)
+
+        print(self.dictionary)
+        print(self.reverse_dictionary)
+
         self.vocab_size = len(self.dictionary)
         # create placeholders for feeding to network operations
         self.x = tf.placeholder("float", [None, input_length, 1])
         self.y = tf.placeholder("float", [None, self.vocab_size])
         # network parameters, weights, biases
-        self.num_hidden = 512
+        self.num_hidden = 256
         self.input_length = input_length
         self.output_length = output_length
         self.var_scope = var_scope
+
+
         with tf.variable_scope(var_scope):
             self.weights = tf.Variable(tf.random_normal([self.num_hidden, self.vocab_size]), name=var_scope+"_W")
             self.biases = tf.Variable(tf.random_normal([self.vocab_size]), name=var_scope+"_b")
 
-    def RNN(self, x, weights, biases):
+    def rnn(self, x, weights, biases):
         # reshape to [1, n_input]
         x = tf.reshape(x, [-1, self.input_length])
 
@@ -39,8 +56,6 @@ class StoryNet(object):
 
         # 5-layer LSTM, each layer has num_hidden units.
         rnn_cell = rnn.MultiRNNCell([
-            rnn.BasicLSTMCell(self.num_hidden),
-            rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden)
         ])
@@ -54,7 +69,7 @@ class StoryNet(object):
 
     def train_model(self, iterations, display_iters, learning_rate):
 
-        pred = self.RNN(self.x, self.weights, self.biases)
+        pred = self.rnn(self.x, self.weights, self.biases)
         # Loss and optimizer
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=self.y))
         optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -66,11 +81,8 @@ class StoryNet(object):
         # init op
         init = tf.global_variables_initializer()
 
-        # create Saver object to store Biases and Weights
-        saver = tf.train.Saver()
-
-        # let the training begin
         with tf.Session() as sess:
+            # let the training begin
             sess.run(init)
             step = 0
             offset = random.randint(0, self.input_length + 1)
@@ -91,7 +103,7 @@ class StoryNet(object):
                 symbols_out_onehot = np.reshape(symbols_out_onehot, [1, -1])
 
                 _, acc, loss, onehot_pred = sess.run([optimizer, accuracy, cost, pred], \
-                    feed_dict={self.x: symbols_in_keys, self.y: symbols_out_onehot})
+                                                          feed_dict={self.x: symbols_in_keys, self.y: symbols_out_onehot})
                 loss_total += loss
                 acc_total += acc
                 if (step + 1) % display_iters == 0:
@@ -109,7 +121,9 @@ class StoryNet(object):
             print("Optimization Finished!")
 
             # save the trained values of the weights and biases
-            save_path = saver.save(sess, '/checkpoints/' + self.var_scope + '.ckpt')
+            saver = tf.train.Saver()
+            save_path = saver.save(sess, './checkpoints/' + self.var_scope + '.ckpt',
+                                   write_meta_graph=False, write_state=False)
 
             print("Run on command line.")
             while True:
@@ -136,9 +150,12 @@ class StoryNet(object):
 
         sentence = input_string
         words = sentence.split(' ')
-        pred = self.RNN(self.x, self.weights, self.biases)
+
+        pred = self.rnn(self.x, self.weights, self.biases)
 
         with tf.Session() as sess:
+            saver = tf.train.Saver()
+            saver.restore(sess, './checkpoints/' + self.var_scope + '.ckpt')
             if len(words) != self.input_length:
                 print("Wrong number of words!, try %s" % self.input_length)
                 return ("Wrong number of words!, try: %s words please" % self.input_length)
@@ -155,13 +172,16 @@ class StoryNet(object):
                     symbols_in_keys.append(onehot_pred_index)
                 print(sentence)
                 return (sentence)
-
             except:
-                return ("Word not in dictionary!\nChoose words from the text")
+                print("check the input")
+                return "Error in prediction function, check tensorflow session"
 
-    def build_dataset(self, story_text):
+
+
+    def build_dataset(self, story_text, store_data=False):
 
         # remove/seperate special characters from story data
+        story_text = story_text.lower()
         story_text = story_text.replace(',', ' , ')
         story_text = story_text.replace('.', ' . ')
         story_text = story_text.replace(':', ' : ')
@@ -181,20 +201,25 @@ class StoryNet(object):
         # break the text apart and store it into useful data structures
         story_data = story_text.split()
         count = collections.Counter(story_data).most_common()
+        # count.sort()
+        # print (count)
         word_dict = dict()
         for word, _ in count:
             word_dict[word] = len(word_dict)
         reverse_dict = dict(zip(word_dict.values(), word_dict.keys()))
+        if store_data == True:
+            print("creating dictionary files")
+            with open("./texts/"+self.var_scope+"_dict.txt", "wb") as dict_file:
+                pickle.dump(word_dict, dict_file, protocol=0)
+            with open("./texts/" + self.var_scope + "_r_dict.txt", "wb") as r_dict_file:
+                pickle.dump(reverse_dict, r_dict_file, protocol=0)
 
         return story_data, word_dict, reverse_dict
 
 
 if __name__ == "__main__":
     training_file = open('./texts/hitch_hiker_quotes.txt', 'r')
+
     training_text = training_file.read()
-    test_net = StoryNet(training_text, 'test', 5, 20)
-    # sess = tf.Session()
-    # saver = tf.train.Saver()
-    # saver.restore(sess, '/checkpoints/test.ckpt')
-    # test_net.create_story("Oh dear dear dear dear")
-    test_net.train_model(1000, 100, 0.001)
+    test_net = StoryNet(training_text, 'hh', 10, 50)
+    test_net.train_model(100000, 1000, 0.001)
