@@ -36,7 +36,7 @@ class StoryNet(object):
         self.x = tf.placeholder("float", [None, input_length, 1])
         self.y = tf.placeholder("float", [None, self.vocab_size])
         # network parameters, weights, biases
-        self.num_hidden = 256
+        self.num_hidden = 512
         self.input_length = input_length
         self.output_length = output_length
         self.var_scope = var_scope
@@ -56,6 +56,7 @@ class StoryNet(object):
 
         # 5-layer LSTM, each layer has num_hidden units.
         rnn_cell = rnn.MultiRNNCell([
+            rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden)
         ])
@@ -218,8 +219,10 @@ class StoryNet(object):
 
 
 if __name__ == "__main__":
-    training_file = open('./texts/hitch_hiker_quotes.txt', 'r')
+    training_file = open('./texts/alice.txt', 'r')
 
     training_text = training_file.read()
-    test_net = StoryNet(training_text, 'hh', 10, 50)
-    test_net.train_model(100000, 1000, 0.001)
+    # alice net trained with 15 word input, 512 unit lstm cells, 3 lstm cells
+    test_net = StoryNet(training_text, 'alice', 15, 50)
+    # hitch-hiker quotes trained with 10 word input sequence, 256 unit lstm units per cell, 2 lstm cells
+    test_net.train_model(1000000, 1000, 0.001)
