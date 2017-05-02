@@ -9,18 +9,22 @@ from tensorflow.contrib import rnn
 import random
 import collections
 import pickle
+import os
 import json
+
 
 class StoryNet(object):
 
-    def __init__(self, story_text, var_scope, input_length, output_length):
+    def __init__(self, story_text, sess, var_scope, input_length, output_length):
 
         self.var_scope = var_scope
+        self.sess = sess
         # process and store the story data
         try:
-            with open("./texts/"+var_scope+"_dict.txt", "rb") as dict_file:
+            full_path = os.path.dirname(os.path.realpath(__file__))
+            with open(full_path + "/texts/"+var_scope+"_dict.txt", "rb") as dict_file:
                 self.dictionary = pickle.load(dict_file)
-            with open("./texts/"+var_scope+"_r_dict.txt", "rb") as reverse_dict:
+            with open(full_path + "/texts/"+var_scope+"_r_dict.txt", "rb") as reverse_dict:
                 self.reverse_dictionary = pickle.load(reverse_dict)
             self.story_data, _, __ = self.build_dataset(story_text, False)
             print(var_scope + "dictionary exists")
@@ -36,7 +40,7 @@ class StoryNet(object):
         self.x = tf.placeholder("float", [None, input_length, 1])
         self.y = tf.placeholder("float", [None, self.vocab_size])
         # network parameters, weights, biases
-        self.num_hidden = 512
+        self.num_hidden = 256
         self.input_length = input_length
         self.output_length = output_length
         self.var_scope = var_scope
@@ -56,7 +60,6 @@ class StoryNet(object):
 
         # 5-layer LSTM, each layer has num_hidden units.
         rnn_cell = rnn.MultiRNNCell([
-            rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden),
             rnn.BasicLSTMCell(self.num_hidden)
         ])
@@ -82,70 +85,70 @@ class StoryNet(object):
         # init op
         init = tf.global_variables_initializer()
 
-        with tf.Session() as sess:
-            # let the training begin
-            sess.run(init)
-            step = 0
-            offset = random.randint(0, self.input_length + 1)
-            end_offset = self.input_length + 1
-            acc_total = 0
-            loss_total = 0
+        # let the training begin
+        self.sess.run(init)
+        step = 0
+        offset = random.randint(0, self.input_length + 1)
+        end_offset = self.input_length + 1
+        acc_total = 0
+        loss_total = 0
 
-            while step < iterations:
-                # Generate a minibatch. Add some randomness on selection process.
-                if offset > (len(self.story_data) - end_offset):
-                    offset = random.randint(0, self.input_length + 1)
+        while step < iterations:
+            # Generate a minibatch. Add some randomness on selection process.
+            if offset > (len(self.story_data) - end_offset):
+                offset = random.randint(0, self.input_length + 1)
 
-                symbols_in_keys = [[self.dictionary[str(self.story_data[i])]] for i in range(offset, offset + self.input_length)]
-                symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
+            symbols_in_keys = [[self.dictionary[str(self.story_data[i])]] for i in range(offset, offset + self.input_length)]
+            symbols_in_keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
 
-                symbols_out_onehot = np.zeros([self.vocab_size], dtype=float)
-                symbols_out_onehot[self.dictionary[str(self.story_data[offset + self.input_length])]] = 1.0
-                symbols_out_onehot = np.reshape(symbols_out_onehot, [1, -1])
+            symbols_out_onehot = np.zeros([self.vocab_size], dtype=float)
+            symbols_out_onehot[self.dictionary[str(self.story_data[offset + self.input_length])]] = 1.0
+            symbols_out_onehot = np.reshape(symbols_out_onehot, [1, -1])
 
-                _, acc, loss, onehot_pred = sess.run([optimizer, accuracy, cost, pred], \
-                                                          feed_dict={self.x: symbols_in_keys, self.y: symbols_out_onehot})
-                loss_total += loss
-                acc_total += acc
-                if (step + 1) % display_iters == 0:
-                    print("Iter= " + str(step + 1) + ", Average Loss= " + \
-                          "{:.6f}".format(loss_total / display_iters) + ", Average Accuracy= " + \
-                          "{:.2f}%".format(100 * acc_total / display_iters))
-                    acc_total = 0
-                    loss_total = 0
-                    symbols_in = [self.story_data[i] for i in range(offset, offset + self.input_length)]
-                    symbols_out = self.story_data[offset + self.input_length]
-                    symbols_out_pred = self.reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
-                    print("%s - [%s] vs [%s]" % (symbols_in, symbols_out, symbols_out_pred))
-                step += 1
-                offset += (self.input_length + 1)
-            print("Optimization Finished!")
+            _, acc, loss, onehot_pred = self.sess.run([optimizer, accuracy, cost, pred], \
+                                                      feed_dict={self.x: symbols_in_keys, self.y: symbols_out_onehot})
+            loss_total += loss
+            acc_total += acc
+            if (step + 1) % display_iters == 0:
+                print("Iter= " + str(step + 1) + ", Average Loss= " + \
+                      "{:.6f}".format(loss_total / display_iters) + ", Average Accuracy= " + \
+                      "{:.2f}%".format(100 * acc_total / display_iters))
+                acc_total = 0
+                loss_total = 0
+                symbols_in = [self.story_data[i] for i in range(offset, offset + self.input_length)]
+                symbols_out = self.story_data[offset + self.input_length]
+                symbols_out_pred = self.reverse_dictionary[int(tf.argmax(onehot_pred, 1).eval())]
+                print("%s - [%s] vs [%s]" % (symbols_in, symbols_out, symbols_out_pred))
+            step += 1
+            offset += (self.input_length + 1)
+        print("Optimization Finished!")
 
-            # save the trained values of the weights and biases
-            saver = tf.train.Saver()
-            save_path = saver.save(sess, './checkpoints/' + self.var_scope + '.ckpt',
-                                   write_meta_graph=False, write_state=False)
+        # save the trained values of the weights and biases
+        full_path = os.path.dirname(os.path.realpath(__file__))
+        saver = tf.train.Saver()
+        save_path = saver.save(self.sess, full_path + '/checkpoints/' + self.var_scope + '.ckpt',
+                               write_meta_graph=False, write_state=False)
 
-            print("Run on command line.")
-            while True:
-                prompt = "%s words: " % self.input_length
-                sentence = input(prompt)
-                sentence = sentence.strip()
-                words = sentence.split(' ')
-                if len(words) != self.input_length:
-                    continue
-                try:
-                    symbols_in_keys = [self.dictionary[str(words[i])] for i in range(len(words))]
-                    for i in range(self.output_length):
-                        keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
-                        onehot_pred = sess.run(pred, feed_dict={self.x: keys})
-                        onehot_pred_index = int(tf.argmax(onehot_pred, 1).eval())
-                        sentence = "%s %s" % (sentence, self.reverse_dictionary[onehot_pred_index])
-                        symbols_in_keys = symbols_in_keys[1:]
-                        symbols_in_keys.append(onehot_pred_index)
-                    print(sentence)
-                except:
-                    print("Word not in dictionary")
+        print("Run on command line.")
+        while True:
+            prompt = "%s words: " % self.input_length
+            sentence = input(prompt)
+            sentence = sentence.strip()
+            words = sentence.split(' ')
+            if len(words) != self.input_length:
+                continue
+            try:
+                symbols_in_keys = [self.dictionary[str(words[i])] for i in range(len(words))]
+                for i in range(self.output_length):
+                    keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
+                    onehot_pred = self.sess.run(pred, feed_dict={self.x: keys})
+                    onehot_pred_index = int(tf.argmax(onehot_pred, 1).eval())
+                    sentence = "%s %s" % (sentence, self.reverse_dictionary[onehot_pred_index])
+                    symbols_in_keys = symbols_in_keys[1:]
+                    symbols_in_keys.append(onehot_pred_index)
+                print(sentence)
+            except:
+                print("Word not in dictionary")
 
     def create_story(self, input_string):
 
@@ -154,30 +157,28 @@ class StoryNet(object):
 
         pred = self.rnn(self.x, self.weights, self.biases)
 
-        with tf.Session() as sess:
-            saver = tf.train.Saver()
-            saver.restore(sess, './checkpoints/' + self.var_scope + '.ckpt')
-            if len(words) != self.input_length:
-                print("Wrong number of words!, try %s" % self.input_length)
-                return ("Wrong number of words!, try: %s words please" % self.input_length)
+        full_path = os.path.dirname(os.path.realpath(__file__))
+        saver = tf.train.Saver()
+        saver.restore(self.sess, full_path + '/checkpoints/' + self.var_scope + '.ckpt')
+        if len(words) != self.input_length:
+            print("Wrong number of words!, try %s" % self.input_length)
+            return ("Wrong number of words!, try: %s words please" % self.input_length)
 
-            try:
-                symbols_in_keys = [self.dictionary[str(words[i])] for i in range(len(words))]
-                print(symbols_in_keys)
-                for i in range(200):
-                    keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
-                    onehot_pred = sess.run(pred, feed_dict={self.x: keys})
-                    onehot_pred_index = int(np.argmax(onehot_pred))
-                    sentence = "%s %s" % (sentence, self.reverse_dictionary[onehot_pred_index])
-                    symbols_in_keys = symbols_in_keys[1:]
-                    symbols_in_keys.append(onehot_pred_index)
-                print(sentence)
-                return (sentence)
-            except:
-                print("check the input")
-                return "Error in prediction function, check tensorflow session"
-
-
+        try:
+            symbols_in_keys = [self.dictionary[str(words[i])] for i in range(len(words))]
+            print(symbols_in_keys)
+            for i in range(200):
+                keys = np.reshape(np.array(symbols_in_keys), [-1, self.input_length, 1])
+                onehot_pred = self.sess.run(pred, feed_dict={self.x: keys})
+                onehot_pred_index = int(np.argmax(onehot_pred))
+                sentence = "%s %s" % (sentence, self.reverse_dictionary[onehot_pred_index])
+                symbols_in_keys = symbols_in_keys[1:]
+                symbols_in_keys.append(onehot_pred_index)
+            print(sentence)
+            return (sentence)
+        except:
+            print("check the input")
+            return "Error in prediction function, check tensorflow session"
 
     def build_dataset(self, story_text, store_data=False):
 
@@ -209,20 +210,22 @@ class StoryNet(object):
             word_dict[word] = len(word_dict)
         reverse_dict = dict(zip(word_dict.values(), word_dict.keys()))
         if store_data == True:
+            full_path = os.path.dirname(os.path.realpath(__file__))[:-1]
             print("creating dictionary files")
-            with open("./texts/"+self.var_scope+"_dict.txt", "wb") as dict_file:
+            with open(full_path + "/texts/"+self.var_scope+"_dict.txt", "wb") as dict_file:
                 pickle.dump(word_dict, dict_file, protocol=0)
-            with open("./texts/" + self.var_scope + "_r_dict.txt", "wb") as r_dict_file:
+            with open(full_path + "/texts/" + self.var_scope + "_r_dict.txt", "wb") as r_dict_file:
                 pickle.dump(reverse_dict, r_dict_file, protocol=0)
 
         return story_data, word_dict, reverse_dict
 
 
 if __name__ == "__main__":
-    training_file = open('./texts/alice.txt', 'r')
-
+    full_path = os.path.dirname(os.path.realpath(__file__))
+    training_file = open(full_path + '/texts/hitch_hiker_quotes.txt', 'r')
+    sess = tf.Session()
     training_text = training_file.read()
     # alice net trained with 15 word input, 512 unit lstm cells, 3 lstm cells
-    test_net = StoryNet(training_text, 'alice', 15, 50)
-    # hitch-hiker quotes trained with 10 word input sequence, 256 unit lstm units per cell, 2 lstm cells
-    test_net.train_model(1000000, 1000, 0.001)
+    test_net = StoryNet(training_text, sess, 'hh', 10, 15)
+    # # hitch-hiker quotes trained with 10 word input sequence, 256 unit lstm units per cell, 2 lstm cells
+    test_net.create_story("oh dear deep fook is this answer is the .")
