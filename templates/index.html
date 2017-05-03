@@ -118,7 +118,7 @@
         var words = $('.input-word').map(function() {return $(this).text();}).get().join(' ');
         console.log(words);
         //set output to processing gif while we wait for ajax response
-        var gif =  "<div class='text-center'> <img class='text-center' src='../static/ripple.svg' /> </div>";
+        var gif =  "<div class='text-center'> Processing...<br/><img class='text-center' src='https://railsgirlssummerofcode.org/img/blog/2016/l1ghtsab3r-partyparrot.gif'/> </div>";
         $("#output").html(gif);
         $.ajax({
             url:'/api/storygen',
