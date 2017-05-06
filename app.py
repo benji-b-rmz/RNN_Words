@@ -2,12 +2,11 @@
 # WebApp for generating a mini-story from Recurrent Neural Networks
 
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
 from model.lstm import StoryNet
-import collections
 
 
 # sequence length, number of words input to the net
@@ -32,6 +31,7 @@ sess = tf.Session()
 weights = test_net.weights
 biases = test_net.biases
 
+
 def RNN(x, weights, biases):
 
     x = tf.reshape(x, [-1, n_input])
@@ -45,9 +45,10 @@ def RNN(x, weights, biases):
     return tf.matmul(outputs[-1], weights) + biases
 
 pred = RNN(x, weights, biases)
-#load the previously trained values
+# load the previously trained values
 saver = tf.train.Saver()
 saver.restore(sess, './model/checkpoints/hh.ckpt')
+
 
 def create_story(input_sentence):
 
@@ -77,15 +78,17 @@ def create_story(input_sentence):
 # web application
 app = Flask(__name__)
 
+
 @app.route('/api/storygen', methods=['POST'])
 def story():
 
     input = request.data.decode(encoding='UTF-8')
     return create_story(input)
 
+
 @app.route('/')
 def home():
-    #send the dictionary of words to the template
+    # send the dictionary of words to the template
     return render_template('index.html', hh_word_bank = reverse_dictionary.values())
 
 if __name__ == "__main__":
