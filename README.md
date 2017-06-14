@@ -5,12 +5,19 @@
 https://medium.com/towards-data-science/lstm-by-example-using-tensorflow-feb0c1968537
 expanded to Flask application with jQuery for API communication
 
-## Installation
+## Installation & Running App
 Clone the repository
+
 `git clone https://github.com/benji-b-rmz/RNN_Words.git`
+
 cd into parent directory of RNN_Words then install dependencies
+
 `pip3 install -r requirements.txt`
+
 Run the flask app
+
 `python3 app.py`
+
 Then point your browser to:
+
 `localhost:5000`
